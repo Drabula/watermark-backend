@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from scipy.fftpack import dct, idct
 
 def embed_visible_watermark(image_path, watermark_path, output_path='output_image.png'):
     
@@ -34,28 +35,44 @@ def embed_visible_watermark(image_path, watermark_path, output_path='output_imag
     cv2.imwrite(output_path, image)
     return output_path
 
-import cv2
-import numpy as np
 
-def embed_invisible_watermark(image_path, watermark_path, output_path='output_image.png'):
+def embed_invisible_watermark(image_path, watermark_path, output_path='output_image.png', alpha=0.1, scale=0.25):
+    # Đọc ảnh màu và chuyển sang YCrCb
+    image_color = cv2.imread(image_path)
+    if image_color is None:
+        raise FileNotFoundError(f"Không tìm thấy ảnh tại {image_path}")
+    image_ycrcb = cv2.cvtColor(image_color, cv2.COLOR_BGR2YCrCb)
     
-    # Đọc ảnh gốc và watermark
-    image = cv2.imread(image_path)
+    # Tách các kênh Y, Cr, Cb
+    y_channel, cr_channel, cb_channel = cv2.split(image_ycrcb)
+    y_channel = np.float32(y_channel)
+
+    # Đọc và resize watermark
     watermark = cv2.imread(watermark_path, cv2.IMREAD_GRAYSCALE)
+    if watermark is None:
+        raise FileNotFoundError(f"Không tìm thấy watermark tại {watermark_path}")
+    
+    wm_h = int(y_channel.shape[0] * scale)
+    wm_w = int(y_channel.shape[1] * scale)
+    watermark = cv2.resize(watermark, (wm_w, wm_h))
+    watermark = np.float32(watermark) / 255.0  # Chuẩn hóa
 
-    # Resize watermark để phù hợp với ảnh gốc
-    watermark = cv2.resize(watermark, (image.shape[1] // 4, image.shape[0] // 4))
+    # DCT kênh Y
+    dct_y = dct(dct(y_channel.T, norm='ortho').T, norm='ortho')
 
-    # Vị trí watermark ở góc trên trái
-    x_offset, y_offset = 20, 20
-    h, w = watermark.shape
+    # Nhúng watermark vào góc trên bên trái
+    dct_y[:wm_h, :wm_w] += alpha * watermark
 
-    # Chèn watermark vào ảnh gốc với độ mờ 10%
-    alpha = 0.1  # Độ trong suốt 10%
-    overlay = image.copy()
-    overlay[y_offset:y_offset+h, x_offset:x_offset+w, 0] = \
-        (1 - alpha) * image[y_offset:y_offset+h, x_offset:x_offset+w, 0] + alpha * watermark
+    # IDCT để tái tạo kênh Y mới
+    y_channel_watermarked = idct(idct(dct_y.T, norm='ortho').T, norm='ortho')
+    y_channel_watermarked = np.clip(y_channel_watermarked, 0, 255).astype(np.uint8)
 
-    # Lưu ảnh đã xử lý
-    cv2.imwrite(output_path, overlay)
+    # Gộp lại với các kênh màu Cr, Cb
+    merged_ycrcb = cv2.merge((y_channel_watermarked, cr_channel, cb_channel))
+
+    # Chuyển về ảnh màu BGR
+    watermarked_image = cv2.cvtColor(merged_ycrcb, cv2.COLOR_YCrCb2BGR)
+
+    # Lưu ảnh
+    cv2.imwrite(output_path, watermarked_image)
     return output_path

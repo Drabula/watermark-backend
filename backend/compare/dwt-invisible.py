@@ -23,4 +23,4 @@ def dwt_invisible_watermark(image_path, watermark_path, alpha=0.2):
     print("DWT Invisible Watermarking hoàn thành. Ảnh lưu: dwt_invisible.jpg")
 
 # Chạy thử nghiệm
-dwt_invisible_watermark("input.jpg", "watermark.png")
+dwt_invisible_watermark("C:/Users/PC/Documents/backend/compare/input.jpg", "C:/Users/PC/Documents/backend/compare/watermark.png")

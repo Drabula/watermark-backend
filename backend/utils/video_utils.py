@@ -3,9 +3,7 @@ import cv2
 import numpy as np
 import os
 
-
 def embed_invisible_watermark_frame(frame, watermark):
-
     frame_yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
     y, u, v = cv2.split(frame_yuv)
 
@@ -33,7 +31,6 @@ def embed_invisible_watermark_frame(frame, watermark):
     return frame_modified
 
 
-
 def embed_watermark_in_video(video_path, watermark_path, output_path='output_video.mp4', visible=True, position="bottom-right"):
     try:
         if visible:
@@ -45,7 +42,12 @@ def embed_watermark_in_video(video_path, watermark_path, output_path='output_vid
                 "bottom-right": "W-w-10:H-h-10",
                 "center": "(W-w)/2:(H-h)/2"
             }
-            overlay_pos = position_map.get(position, "W-w-10:H-h-10")
+
+            # Kiểm tra vị trí hợp lệ
+            if position not in position_map:
+                raise ValueError(f"Vị trí không hợp lệ: {position}")
+
+            overlay_pos = position_map[position]
 
             # Nhúng watermark visible bằng FFmpeg
             command = [
@@ -66,6 +68,9 @@ def embed_watermark_in_video(video_path, watermark_path, output_path='output_vid
 
             # Xử lý video với OpenCV (tránh lưu từng frame ra file)
             cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                raise ValueError("Không thể mở video.")
+            
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv2.CAP_PROP_FPS)
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -100,4 +105,3 @@ def embed_watermark_in_video(video_path, watermark_path, output_path='output_vid
     except Exception as e:
         print(f"❌ Lỗi khi xử lý video: {e}")
         return None
-
