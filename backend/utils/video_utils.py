@@ -51,12 +51,12 @@ def embed_watermark_in_video(video_path, watermark_path, output_path='output_vid
 
             # Nhúng watermark visible bằng FFmpeg
             command = [
-                'ffmpeg', '-i', video_path, '-i', watermark_path,
-                '-filter_complex', f'[1:v]scale=100:-1[wm];[0:v][wm]overlay={overlay_pos}',
-                '-c:v', 'libx264', '-preset', 'slow', '-crf', '23',
-                '-c:a', 'aac', '-b:a', '192k', '-strict', '-2',
-                output_path
-            ]
+            'ffmpeg', '-y', '-i', video_path, '-i', watermark_path,
+            '-filter_complex', f'[1:v]scale=100:-1[wm];[0:v][wm]overlay={overlay_pos}',
+            '-c:v', 'libx264', '-preset', 'slow', '-crf', '23',
+            '-c:a', 'aac', '-b:a', '192k', '-strict', '-2',
+            output_path
+]
             subprocess.run(command, check=True)
             return output_path
 
@@ -92,9 +92,11 @@ def embed_watermark_in_video(video_path, watermark_path, output_path='output_vid
 
             # Dùng FFmpeg để ghép âm thanh từ video gốc
             command = [
-                'ffmpeg', '-i', "temp_video.mp4", '-i', video_path,
-                '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac',
-                '-b:a', '192k', '-strict', '-2', output_path
+                'ffmpeg', '-y', '-i', video_path, '-i', watermark_path,
+                '-filter_complex', f'[1:v]scale=100:-1[wm];[0:v][wm]overlay={overlay_pos}',
+                '-c:v', 'libx264', '-preset', 'slow', '-crf', '23',
+                '-c:a', 'aac', '-b:a', '192k', '-strict', '-2',
+                output_path
             ]
             subprocess.run(command, check=True)
 

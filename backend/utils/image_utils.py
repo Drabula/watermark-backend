@@ -36,43 +36,31 @@ def embed_visible_watermark(image_path, watermark_path, output_path='output_imag
     return output_path
 
 
-def embed_invisible_watermark(image_path, watermark_path, output_path='output_image.png', alpha=0.1, scale=0.25):
-    # Đọc ảnh màu và chuyển sang YCrCb
-    image_color = cv2.imread(image_path)
-    if image_color is None:
-        raise FileNotFoundError(f"Không tìm thấy ảnh tại {image_path}")
-    image_ycrcb = cv2.cvtColor(image_color, cv2.COLOR_BGR2YCrCb)
-    
-    # Tách các kênh Y, Cr, Cb
-    y_channel, cr_channel, cb_channel = cv2.split(image_ycrcb)
-    y_channel = np.float32(y_channel)
+import cv2
+import numpy as np
+import pywt
 
-    # Đọc và resize watermark
+def embed_dwt_watermark(image_path, watermark_path, output_path, alpha=0.1, scale=0.25):
+    image = cv2.imread(image_path)
     watermark = cv2.imread(watermark_path, cv2.IMREAD_GRAYSCALE)
-    if watermark is None:
-        raise FileNotFoundError(f"Không tìm thấy watermark tại {watermark_path}")
-    
-    wm_h = int(y_channel.shape[0] * scale)
-    wm_w = int(y_channel.shape[1] * scale)
-    watermark = cv2.resize(watermark, (wm_w, wm_h))
-    watermark = np.float32(watermark) / 255.0  # Chuẩn hóa
 
-    # DCT kênh Y
-    dct_y = dct(dct(y_channel.T, norm='ortho').T, norm='ortho')
+    wm_h = int(image.shape[0] * scale)
+    wm_w = int(image.shape[1] * scale)
+    watermark_resized = cv2.resize(watermark, (wm_w, wm_h))
+    watermark_norm = (np.float32(watermark_resized) - 127.5) / 127.5
 
-    # Nhúng watermark vào góc trên bên trái
-    dct_y[:wm_h, :wm_w] += alpha * watermark
+    image_ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(image_ycrcb)
+    y = np.float32(y)
+    coeffs = pywt.dwt2(y, 'haar')
+    LL, (LH, HL, HH) = coeffs
 
-    # IDCT để tái tạo kênh Y mới
-    y_channel_watermarked = idct(idct(dct_y.T, norm='ortho').T, norm='ortho')
-    y_channel_watermarked = np.clip(y_channel_watermarked, 0, 255).astype(np.uint8)
+    HL_embed = HL.copy()
+    HL_embed[:wm_h, :wm_w] += alpha * watermark_norm
 
-    # Gộp lại với các kênh màu Cr, Cb
-    merged_ycrcb = cv2.merge((y_channel_watermarked, cr_channel, cb_channel))
-
-    # Chuyển về ảnh màu BGR
-    watermarked_image = cv2.cvtColor(merged_ycrcb, cv2.COLOR_YCrCb2BGR)
-
-    # Lưu ảnh
-    cv2.imwrite(output_path, watermarked_image)
-    return output_path
+    y_embed = pywt.idwt2((LL, (LH, HL_embed, HH)), 'haar')
+    y_embed = np.clip(y_embed, 0, 255).astype(np.uint8)
+    result = cv2.merge((y_embed, cr, cb))
+    result = cv2.cvtColor(result, cv2.COLOR_YCrCb2BGR)
+    cv2.imwrite(output_path, result)
+    return output_path, (wm_h, wm_w)
