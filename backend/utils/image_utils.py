@@ -3,20 +3,20 @@ import numpy as np
 from scipy.fftpack import dct, idct
 
 def embed_visible_watermark(image_path, watermark_path, output_path='output_image.png', wm_size=(150, 150)):
-    # Đọc ảnh gốc và watermark
+    
     image = cv2.imread(image_path)
     watermark = cv2.imread(watermark_path, cv2.IMREAD_UNCHANGED)
 
-    # Resize watermark về kích thước cố định (mặc định 150x150)
+   
     wm_width, wm_height = wm_size
     watermark = cv2.resize(watermark, (wm_width, wm_height))
 
-    # Kiểm tra watermark có kênh alpha không
+    
     if watermark.shape[2] == 4:
-        alpha_channel = watermark[:, :, 3] / 255.0  # Chuẩn hóa alpha
-        watermark = watermark[:, :, :3]  # Bỏ kênh alpha, giữ RGB
+        alpha_channel = watermark[:, :, 3] / 255.0  
+        watermark = watermark[:, :, :3]  
     else:
-        alpha_channel = np.ones((wm_height, wm_width))  # Nếu không có alpha, coi như full opacity
+        alpha_channel = np.ones((wm_height, wm_width))  
 
     # Xác định vị trí chèn watermark (góc dưới bên phải)
     y_offset = image.shape[0] - wm_height - 10
@@ -29,7 +29,7 @@ def embed_visible_watermark(image_path, watermark_path, output_path='output_imag
             alpha_channel * watermark[:, :, c]
         )
 
-    # Lưu ảnh kết quả
+    
     cv2.imwrite(output_path, image)
     return output_path
 

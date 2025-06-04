@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from scipy.fftpack import dct, idct
 import pywt
+import os
+import tempfile
 
 def extract_dwt_watermark(image_path, wm_shape, alpha=0.1):
     image = cv2.imread(image_path)
@@ -12,8 +14,18 @@ def extract_dwt_watermark(image_path, wm_shape, alpha=0.1):
     extracted = HL[:wm_h, :wm_w] / alpha
     extracted = np.clip(extracted, -1, 1)
     extracted = ((extracted + 1) / 2.0) * 255
-    return np.clip(extracted, 0, 255).astype(np.uint8)
+    result_img = np.clip(extracted, 0, 255).astype(np.uint8)
 
+    # Lấy thư mục temp tuyệt đối (đi lên 1 cấp từ file extract_utils.py)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # /backend
+    temp_dir = os.path.join(base_dir, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+
+    filename = f"extracted_wm_{os.path.basename(image_path)}"
+    save_path = os.path.join(temp_dir, filename)
+    cv2.imwrite(save_path, result_img)
+
+    return save_path
 
 
 def extract_visible_watermark(image_path, scale=0.2, margin=10):
