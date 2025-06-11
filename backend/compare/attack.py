@@ -104,3 +104,44 @@ for i, (name, func) in enumerate(attack_functions.items()):
 
 plt.tight_layout()
 plt.show()
+from skimage.metrics import structural_similarity as ssim
+
+# ==== Hàm tính SSIM ====
+def calculate_ssim(original, extracted):
+    return ssim(original, extracted, data_range=extracted.max() - extracted.min())
+
+# ==== Đọc ảnh watermark gốc và trích xuất ====
+original_wm = cv2.imread(original_wm_path, cv2.IMREAD_GRAYSCALE)
+wm_dct = cv2.imread("compare/extracted_watermark_dct.png", cv2.IMREAD_GRAYSCALE)
+wm_dwt = cv2.imread("compare/extracted_watermark_dwt.png", cv2.IMREAD_GRAYSCALE)
+
+if original_wm is None or wm_dct is None or wm_dwt is None:
+    raise FileNotFoundError("[❌] Thiếu ảnh watermark để so sánh")
+
+# ==== Tính toán ====
+psnr_dct = calculate_psnr(original_wm, wm_dct)
+ssim_dct = calculate_ssim(original_wm, wm_dct)
+
+psnr_dwt = calculate_psnr(original_wm, wm_dwt)
+ssim_dwt = calculate_ssim(original_wm, wm_dwt)
+
+# ==== Hiển thị kết quả ====
+plt.figure(figsize=(10, 4))
+
+plt.subplot(1, 3, 1)
+plt.imshow(original_wm, cmap='gray')
+plt.title("Watermark Gốc")
+plt.axis('off')
+
+plt.subplot(1, 3, 2)
+plt.imshow(wm_dct, cmap='gray')
+plt.title(f"DCT\nPSNR: {psnr_dct:.2f} dB\nSSIM: {ssim_dct:.3f}")
+plt.axis('off')
+
+plt.subplot(1, 3, 3)
+plt.imshow(wm_dwt, cmap='gray')
+plt.title(f"DWT\nPSNR: {psnr_dwt:.2f} dB\nSSIM: {ssim_dwt:.3f}")
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()

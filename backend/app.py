@@ -131,8 +131,12 @@ def extract_dwt_video():
         video_file.save(temp_video_path)
 
         extracted = extract_invisible_watermark_from_video(temp_video_path, (wm_h, wm_w), alpha)
-
+        if extracted is None:
+            return jsonify({'error': '❌ Không trích được watermark. Có thể wm_h, wm_w hoặc alpha không đúng.'}), 500
         result_path = os.path.join(TEMP_DIR, f'extracted_wm_{uuid.uuid4().hex}.png')
+        print(f"[DEBUG] wm_h={wm_h}, wm_w={wm_w}, alpha={alpha}")
+        print(f"[DEBUG] extracted shape: {extracted.shape if extracted is not None else 'None'}")
+
         cv2.imwrite(result_path, extracted)
 
         os.remove(temp_video_path)

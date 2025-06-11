@@ -37,36 +37,31 @@ def extract_visible_watermark(image_path, scale=0.2, margin=10):
     watermark_region = image[y_offset:y_offset+wm_h, x_offset:x_offset+wm_w]
     return watermark_region
 
-def extract_invisible_watermark_from_video(video_path, wm_shape, alpha=0.1, num_frames=30):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise ValueError("Không thể mở video.")
+def extract_invisible_watermark_from_video(video_path, watermark_shape=(64, 64), alpha=0.1):
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise ValueError("Không thể mở video.")
 
-    wm_h, wm_w = wm_shape
-    wm_accumulate = np.zeros((wm_h, wm_w), dtype=np.float32)
-    count = 0
-
-    while count < num_frames:
         ret, frame = cap.read()
+        cap.release()
         if not ret:
-            break
+            raise ValueError("Không thể đọc frame đầu tiên.")
 
-        y = np.float32(cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)[:, :, 0])
-        _, (LH, HL, HH) = pywt.dwt2(y, 'haar')
+        # ✅ Bổ sung dòng này để định nghĩa biến y
+        frame_ycbcr = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
+        y = np.float32(frame_ycbcr[:, :, 0])  # Lấy kênh Y và convert về float32
 
-        # Trích xuất và giải chuẩn hóa watermark
-        extracted_norm = HL[:wm_h, :wm_w] / alpha
-        wm_accumulate += extracted_norm
-        count += 1
+        # ✅ DWT 2 chiều
+        LL, (LH, HL, HH) = pywt.dwt2(y, 'haar')
 
-    cap.release()
+        wm_h, wm_w = watermark_shape
+        wm_band = HL[:wm_h, :wm_w]
+        watermark_norm = wm_band / alpha
+        watermark = ((watermark_norm * 127.5) + 127.5).astype(np.uint8)
 
-    wm_avg_norm = wm_accumulate / count
-    wm_avg_norm = np.clip(wm_avg_norm, -1, 1)
+        return watermark
 
-    # Chuyển từ chuẩn hóa [-1,1] về [0,255]
-    wm_scaled = ((wm_avg_norm + 1.0) / 2.0) * 255.0
-    wm_result = np.clip(wm_scaled, 0, 255).astype(np.uint8)
-
-    return wm_result
-
+    except Exception as e:
+        print(f"Lỗi khi trích watermark: {e}")
+        return None
